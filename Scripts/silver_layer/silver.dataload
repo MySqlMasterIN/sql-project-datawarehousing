@@ -29,22 +29,22 @@ create or alter procedure silver.load_silver AS
             select
                 cst_id,
                 cst_key,
-                trim(cst_firstname) as cst_firstname, -- removed unwanted spaces from the cst_firstname --
-                trim(cst_lastname) as cst_lastname, -- removed unwanted spaces from the cst_lastname --
+                trim(cst_firstname) as cst_firstname, -- removed unwanted spaces from the 'cst_firstname' --
+                trim(cst_lastname) as cst_lastname, -- removed unwanted spaces from the 'cst_lastname' --
                 case when UPPER(trim(cst_marital_status)) = 'M' then 'Married'
-                    when UPPER(trim(cst_marital_status)) = 'S' then 'Single' -- normalize & standardize marital status to readable format --
-                    else 'n/a'   -- handeled the missing values or null values in the column --
+                     when UPPER(trim(cst_marital_status)) = 'S' then 'Single' -- normalize & standardize 'marital_status' to readable format --
+                     else 'n/a'   -- handeled the missing values or null values in 'marital_status' column --
                 END as cst_marital_status,
                 case when UPPER(trim(cst_gndr)) = 'M' then 'Male'
-                    when upper(trim(cst_gndr)) = 'F' then 'Female' -- normalize and standardize gender to readable format --
-                    else 'n/a'  -- handeled the missing values or null values in the column --
+                     when upper(trim(cst_gndr)) = 'F' then 'Female' -- normalize and standardize 'cst_gndr' to readable format --
+                     else 'n/a'  -- handeled the missing values or null values in the 'cst_gndr' --
                 END as cst_gndr, 
                 cst_create_date
             FROM (select *,
                     ROW_NUMBER() over(partition by cst_id order by cst_create_date desc) as flag_last
                     from bronze.crm_cust_info
                     where cst_id is not null) as T
-            where flag_last =1; -- removed the duplicated from the primary key by removing the most relevent row --
+            where flag_last =1; -- removed the duplicate from the primary key (cst_id) by retriving the most relevent row --
             SET @end_time = GETDATE();
 
             PRINT '>> Load Duration:' + cast(DATEDIFF(SECOND,@start_time, @end_time) as VARCHAR) + 'seconds';
@@ -56,7 +56,7 @@ create or alter procedure silver.load_silver AS
             TRUNCATE TABLE silver.crm_prd_info;
 
             PRINT '>> Inserting data into: silver.crm_prd_info';
-            insert into silver.crm_prd_info
+            insert into silver.crm_prd_info -- inserting the processed data from bronze.crm_prd_info tabel to silver.crm_prd_info --
                 (
                     prd_id,
                     cat_id,
@@ -69,18 +69,18 @@ create or alter procedure silver.load_silver AS
                 )
             select 
                 prd_id,
-                replace(substring(prd_key,1,5),'-','_') as cat_id, -- derived column from prd_key column --
-                SUBSTRING(prd_key,7,len(prd_key)) as prd_key, -- derived column from prd_key column -- 
+                replace(substring(prd_key,1,5),'-','_') as cat_id, -- 'derived column' from prd_key column (data enrichment) --
+                SUBSTRING(prd_key,7,len(prd_key)) as prd_key, -- 'derived column' from prd_key column (data enrichment) -- 
                 prd_nm,
-                isnull(prd_cost,0) as prd_cost, -- handle null values --
-                case when UPPER(trim(prd_line)) = 'R' then 'Road'
-                    when UPPER(trim(prd_line)) = 'S' then 'Other Sales'
-                    when UPPER(trim(prd_line)) = 'M' then 'Mountain'
-                    when UPPER(trim(prd_line)) = 'T' then 'Touring'
-                    else 'n/a' -- normalized 'prd_line' values to more readable format --
+                ifnull(prd_cost,0) as prd_cost, -- handle null values --
+                case when UPPER(trim(prd_line)) = 'R' then 'Road'       -- normalized 'prd_line' values to more readable format --
+                     when UPPER(trim(prd_line)) = 'S' then 'Other Sales'
+                     when UPPER(trim(prd_line)) = 'M' then 'Mountain'
+                     when UPPER(trim(prd_line)) = 'T' then 'Touring'
+                     else 'n/a'  -- replacing null values with 'n/a' --
                 END as prd_line,
                 cast(prd_start_date as date) as prd_start_date,
-                cast(lead(prd_start_date) over(partition by prd_key order by prd_start_date)-1 as date) as prd_end_date -- data enrichment >> calculate end date as one day before the next start date --
+                cast(lead(prd_start_date) over(partition by prd_key order by prd_start_date)-1 as date) as prd_end_date -- data enrichment >>                                                                                                                               calculate end date as                                                                                                                            one day before the                                                                                                                               next start date --
             from bronze.crm_prd_info;
             SET @end_time = GETDATE();
 
@@ -93,7 +93,7 @@ create or alter procedure silver.load_silver AS
             TRUNCATE TABLE silver.crm_sales_details;
 
             PRINT '>> Inserting data into: silver.crm_sales_details';
-            insert into silver.crm_sales_details
+            insert into silver.crm_sales_details -- inserting the processed data from bronze.crm_sales_details to silver.crm_sales_details --
                 (
                     sls_ord_num,
                     sls_prd_key,
@@ -109,22 +109,22 @@ create or alter procedure silver.load_silver AS
                 sls_ord_num,
                 sls_prd_key,
                 sls_cust_id,
-                case when sls_order_dt <= 0 or len(sls_order_dt) != 8 then NULL -- handeling the invalid data --
-                    else cast(cast(sls_order_dt as varchar) as date) -- changing the datatype -- 
+                case when sls_order_dt <= 0 or len(sls_order_dt) != 8 then NULL -- handeling the invalid data and nulls --
+                     else cast(cast(sls_order_dt as varchar) as date) -- changing the datatype -- 
                 end as sls_order_dt,
-                case when sls_ship_dt <= 0 or len(sls_ship_dt) != 8 then NULL
-                    else cast(cast(sls_ship_dt as varchar) as date)
+                case when sls_ship_dt <= 0 or len(sls_ship_dt) != 8 then NULL -- handeling the invalid data and nulls --
+                     else cast(cast(sls_ship_dt as varchar) as date) -- changing the datatype -- 
                 end as sls_ship_dt,
-                case when sls_due_dt <= 0 or len(sls_due_dt) != 8 then NULL
-                    else cast(cast(sls_due_dt as varchar) as date)
+                case when sls_due_dt <= 0 or len(sls_due_dt) != 8 then NULL -- handeling the invalid data and nulls --
+                     else cast(cast(sls_due_dt as varchar) as date) -- changing the datatype -- 
                 end as sls_due_dt,
-                CASE when sls_sales <= 0 or sls_sales is null or sls_sales != (abs(sls_quantity) * abs(sls_price)) then abs(sls_quantity) * abs(sls_price) -- handeling nulls, invalid data -- 
-                    else sls_sales
+                CASE when sls_sales <= 0 or sls_sales is null or sls_sales != (abs(sls_quantity) * abs(sls_price)) then abs(sls_quantity) *                              abs(sls_price) -- handeling nulls, invalid data -- 
+                     else sls_sales
                 end as sls_sales,
                 abs(sls_quantity) as sls_quantity,
                 CASE when sls_price is NULL or sls_price = 0 then (sls_sales/sls_quantity) -- handeling nulls, invalid data -- 
-                    when sls_price < 0 then abs(sls_price)
-                    else sls_price
+                     when sls_price < 0 then abs(sls_price)
+                     else sls_price
                 end as sls_price
             from bronze.crm_sales_details;
             SET @end_time = GETDATE();
@@ -142,7 +142,7 @@ create or alter procedure silver.load_silver AS
             TRUNCATE TABLE silver.erp_cust_az12;
 
             PRINT '>> Inserting data into: silver.erp_cust_az12';
-            insert into silver.erp_cust_az12
+            insert into silver.erp_cust_az12 -- inserting the processed data from bronze.erp_cust_za12 to silver.erp_cust_za12 --
                 (
                     cid,
                     bdate,
@@ -150,14 +150,14 @@ create or alter procedure silver.load_silver AS
                 )
             select 
                 CASE WHEN cid like 'NAS%' then substring(cid, 4, len(cid)) -- remove NAS prefix from cid --
-                    else cid
+                     else cid
                 end as cid,
-                case when bdate > GETDATE() then null
-                    else bdate
+                case when bdate > GETDATE() then null -- standardizing the data --
+                     else bdate
                 end as bdate,
                 case when upper(trim(gen)) like 'F%' then 'FEMALE'
-                    when upper(trim(gen)) like 'M%' then 'MALE'
-                    else 'n/a' -- normalize gender value and handle unknown cases --
+                     when upper(trim(gen)) like 'M%' then 'MALE'
+                     else 'n/a' -- normalize gender value and handle unknown cases --
                 end as gen
             from bronze.erp_cust_az12;
             SET @end_time = GETDATE();
@@ -171,7 +171,7 @@ create or alter procedure silver.load_silver AS
             TRUNCATE TABLE silver.erp_loc_a101;
 
             PRINT '>> Inserting data into: silver.erp_loc_a101';
-            insert into silver.erp_loc_a101
+            insert into silver.erp_loc_a101  -- inserting the processed data from bronze.erp_loc_a101 to silver.erp_loc_a101 --
                 (
                     cid,
                     cntry
@@ -179,12 +179,12 @@ create or alter procedure silver.load_silver AS
             select 
                 REPLACE(cid, '-', '') as cid,
                 case when upper(trim(cntry)) like 'USA%' or upper(trim(cntry)) like 'US%' or upper(trim(cntry)) like 'UNITED S%' then 'USA'
-                    when upper(trim(cntry)) like 'AUS%' then 'AUSTRALIA'
-                    when upper(trim(cntry)) like 'CAN%' then 'CANADA'
-                    when upper(trim(cntry)) like 'D%' or upper(trim(cntry)) like 'GE%' then 'GERMANY'
-                    when upper(trim(cntry)) like 'UNITED KI%' then 'UNITED KINGDOM'
-                    when upper(trim(cntry)) like 'FR%' then 'FRANCE'
-                    else 'n/a' -- normalize and handle the missing or null values --
+                     when upper(trim(cntry)) like 'AUS%' then 'AUSTRALIA'
+                     when upper(trim(cntry)) like 'CAN%' then 'CANADA'
+                     when upper(trim(cntry)) like 'D%' or upper(trim(cntry)) like 'GE%' then 'GERMANY'
+                     when upper(trim(cntry)) like 'UNITED KI%' then 'UNITED KINGDOM'
+                     when upper(trim(cntry)) like 'FR%' then 'FRANCE'
+                     else 'n/a' -- normalize and handle the missing or null values --
                 end as cntry
             from bronze.erp_loc_a101;
             SET @end_time = GETDATE();
@@ -199,7 +199,7 @@ create or alter procedure silver.load_silver AS
             TRUNCATE TABLE silver.erp_px_cat_g1v2;
 
             PRINT '>> Inserting data into: silver.erp_px_cat_g1v2';
-            insert into silver.erp_px_cat_g1v2
+            insert into silver.erp_px_cat_g1v2 -- inserting the processed data from bronze.erp_px_cat_g1v2 to silver.erp_px_cat_g1v2 --
                 (
                     id,
                     cat,
@@ -208,9 +208,9 @@ create or alter procedure silver.load_silver AS
                 )
             select 
                 id,
-                trim(cat) as cat,
-                trim(subcat) as subcat,
-                case when maintenance like 'Y%' then 'Yes'
+                trim(cat) as cat, -- removed extra spaces --
+                trim(subcat) as subcat, -- removed extra spaces --
+                case when maintenance like 'Y%' then 'Yes' -- data standardization --
                     else 'No'
                 END as maintenance
             from bronze.erp_px_cat_g1v2;
