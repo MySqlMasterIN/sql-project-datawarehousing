@@ -1,3 +1,20 @@
+/*
+=============================================================================================
+After transforming and cleansing Bronze data, load the curated dataset into the Silver schem
+=============================================================================================
+Script Purpose : Transform Bronze → Silver layer with full data refresh
+
+    1. TRUNCATE Silver tables (clean state)
+    2. Data transformations: enrichment, standardization, deduplication, missing value handling, data type casting
+    3. Load curated dataset into Silver schema
+Automation: Stored procedure bronze.load_bronze encapsulates the entire process. Execute anytime business requires data refresh:
+
+EXEC silver.load_silver;
+
+/*
+
+
+
 create or alter procedure silver.load_silver AS
     BEGIN
         DECLARE @start_time DATETIME, @end_time DATETIME, @batch_start_time DATETIME, @batch_end_time DATETIME 
