@@ -1,10 +1,14 @@
+/*
+=================================================
+Create tables in silver layer
+=================================================
+Script Purpose :
+  This script creates tables in the silver layer. It first verifies if each table exists in the database. If a table exists, it drops the           existing table and recreates it from scratch.
 
-
-
-
-
-
-
+Warning :
+  Running this script will permanently delete any existing tables with the same names in the database.
+  Always create backups of critical data before execution to prevent irreversible data loss.
+/*
 
 if OBJECT_ID('silver.crm_cust_info', 'U') is not NULL
     drop table silver.crm_cust_info;
