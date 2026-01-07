@@ -1,0 +1,62 @@
+/*
+====================================
+Data Dictionary for Gold Layer
+====================================
+Overview:
+  The gold layer a business level data representation, structured to support analytical and reporting use cases. it contains of dimension     tables and fact tables for specific business metriccs.
+------------------------
+1. gold.dim_customers
+------------------------
+-------------------------------------------------------------------------------------------------------------------------------------
+|  Column Name                     |  Data Type        |  Description                                                               |
+-------------------------------------------------------------------------------------------------------------------------------------
+   customer_key                       int                 Surrogate key: Unique identifier for each customer record in the dimension 
+                                                          table.
+   customer_id                        int                 Unique numerical identifier assigned to each row.
+   customer_number                    varchar(50)         Alphanumeric identifier representing the customer.
+   firstname                          varchar(50)         Customer first name as recorded in the system.
+   lastname                           varchar(50)         Customer last name as recorded in the system.
+   country                            varchar(50)         Country of residence for the customer as recorder in the system.
+   marital_status                     varchar(50)         Marital status of the customer (Married, single)
+   gender                             varchar(50)         gender of the customer (Male, Female, 'n/a')
+   birthdate                          date                Birth date of the customer  
+   create_date                        date                Date when the customer record was created in the system.
+--------------------------------------------------------------------------------------------------------------------------------------
+
+------------------------
+2. gold.dim_products
+------------------------
+-------------------------------------------------------------------------------------------------------------------------------------
+|  Column Name                     |  Data Type        |  Description                                                               |
+-------------------------------------------------------------------------------------------------------------------------------------
+   product_key                        int                 Surrogate key: Unique identifier for each product record in the dimension 
+                                                          table.
+   product_id                         int                 Unique numerical identifier assigned to each row.
+   product_number                     varchar(50)         Alphanumeric identifier representing the product.
+   product_name                       varchar(50)         Product name as recorded in the system.
+   category_id                        varchar(50)         Unique alphabetic identifier for each product category (BI_MB)
+   category                           varchar(50)         Category of each product (Bikes, components etc.)
+   subcategory                        varchar(50)         Subcategory of each product.
+   maintenance                        varchar(50)         Maintenance status of each product.
+   cost                               int                 cost of each product.
+   product_line                       varchar(50)         product line for each product (Mountain, Road etc.)
+   start_date                         date                Earliest date when the product is updated in the system
+--------------------------------------------------------------------------------------------------------------------------------------
+
+------------------------
+3. gold.fact_sales
+------------------------
+-------------------------------------------------------------------------------------------------------------------------------------
+|  Column Name                     |  Data Type        |  Description                                                               |
+-------------------------------------------------------------------------------------------------------------------------------------
+   order_number                       varchar(50)         Alphanumeric identifier assign to each order
+   product_key                        int                 Foreign key in sales table which is used to pull the product information from                                                            product dimension table 
+   customer_key                       int                 Foreign key in sales table which is used to pull the customer information from                                                           customer dimension table
+   order_date                         date                Date when customer placed the order (yyyy-mm-dd)
+   ship_date                          date                Date when customer order is shipped (yyyy-mm-dd)
+   due_date                           date                Promised date by when the product will be delivered to customer (yyyy-mm-dd)
+   sales                              int                 Total sales
+   quantity                           int                 Product Quantity sold per order
+   price                              int                 Price of each product
+--------------------------------------------------------------------------------------------------------------------------------------
+/*
