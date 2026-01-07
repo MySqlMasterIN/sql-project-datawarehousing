@@ -2,15 +2,16 @@
 =============================================================================================
 Create Gold Layer
 =============================================================================================
-Script Purpose: Define Gold-layer views in the data warehouse.
-- Expose star-schema compatible fact and dimension structures for analytics.
-Each view applies business transformations and joins curated Silver-layer tables
-to produce clean, enriched, and analysis-ready datasets for reporting and BI.
-
+Script Purpose: 
+       1. Define Gold-layer views in the data warehouse.
+       2. Expose star-schema compatible fact and dimension structures for analytics.
+       3. Each view applies business transformations and joins curated Silver-layer tablesto produce clean, enriched, and analysis-ready datasets           for reporting and BI.
 /*
 
 
--- create dimension customer and rename the columns in dimension table --
+------------------------------------------------------------------------
+create dimension customer and rename the columns in dimension table
+------------------------------------------------------------------------
 
 create VIEW gold.dim_customers AS
 select 
@@ -30,12 +31,9 @@ FROM silver.crm_cust_info
 left join silver.erp_cust_az12 on silver.crm_cust_info.cst_key = silver.erp_cust_az12.cid
 left join silver.erp_loc_a101 on silver.crm_cust_info.cst_key = silver.erp_loc_a101.cid;
 
-
--- create dimension products and rename the column name in dimension table --
-
-select * from silver.crm_prd_info;
-select * from silver.erp_px_cat_g1v2;
-select * from bronze.erp_px_cat_g1v2
+------------------------------------------------------------------------
+create dimension products and rename the column name in dimension table
+------------------------------------------------------------------------
 
 create view gold.dim_products as
 select 
@@ -56,13 +54,9 @@ where prd_end_date is NULL; -- filter all historical data --
 
 drop view gold.dim_products
 
-
--- create dimension sales and rename the column name in dimension table --
-
-select * from silver.crm_sales_details;
-select * from gold.dim_customers;
-select * from gold.dim_products;
-
+------------------------------------------------------------------------
+create fact table sales and rename the column name in fact table
+------------------------------------------------------------------------
 
 create view gold.fact_sales as 
 SELECT  
