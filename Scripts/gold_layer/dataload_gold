@@ -1,10 +1,13 @@
+/*
+=============================================================================================
+Create Gold Layer
+=============================================================================================
+Script Purpose: Define Gold-layer views in the data warehouse.
+- Expose star-schema compatible fact and dimension structures for analytics.
+Each view applies business transformations and joins curated Silver-layer tables
+to produce clean, enriched, and analysis-ready datasets for reporting and BI.
 
-
-
-
-
-
-
+/*
 
 
 -- create dimension customer and rename the columns in dimension table --
