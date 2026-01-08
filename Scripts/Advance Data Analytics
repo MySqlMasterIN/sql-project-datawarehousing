@@ -4,4 +4,177 @@ Advance Data Analytics
 ==========================================
 /*
 
-1. 
+---------------------------------
+1. Changes over time analysis
+---------------------------------
+How a measure evolves over the time. these are used for trend analysis.
+
+>> Example --
+
+   1. Analyze sales performance over time (year)
+
+        select 
+          year(order_date) as 'year',
+          sum(sales) as totalsales,
+          sum(quantity) as total_quantity_sold
+        from gold.fact_sales
+        where order_date is not null
+        group by year(order_date)
+        order by year;
+
+---------------------------------
+1. Cumulative analysis
+---------------------------------
+Aggregating the data progressively everytime, to know how oue business is growing over the time
+
+>> Example --
+
+   1. Calculate the total sales per year and the running total of sales per year
+
+        with total_revenue AS
+        (
+            select 
+                year(order_date) as year,
+                sum(sales) as totalsales
+            from gold.fact_sales
+            where order_date is not NULL
+            group by year(order_date)
+        ),
+        running_total as
+        (
+            SELECT
+                *,
+                sum(totalsales) over(order by year) as running_total
+            from total_revenue
+        )
+        select * from running_total
+
+---------------------------------
+2. Performance analysis
+---------------------------------
+Comparing current value with target value
+
+>> Example --
+
+   1. Compare yearly product sales against previous year. 
+      Display: 'Increasing' ---> (positive growth) 
+               'Decreasing' ---> (negative growth),  
+               'No Change'  ---> (no growth)
+
+        with yearly_product_sales as
+            (
+                select
+                    year(order_date) as year,
+                    product_name,
+                    sum(sales) as totalsales,
+                    lag(sum(sales)) over(partition by product_name order by year(order_date)) as prv_year
+                from gold.fact_sales
+                left join gold.dim_products on gold.fact_sales.product_key = gold.dim_products.product_key
+                where order_date is not null
+                group by year(order_date), product_name
+            ),
+            yearly_sales_diff AS
+            (
+                SELECT  
+                    *,
+                    totalsales - prv_year as diff,
+                    case when totalsales - prv_year >0 then 'Increasing'
+                         when totalsales - prv_year <0 then 'Decreasing'
+                         else 'No change'
+                    END as py_change
+                from yearly_product_sales
+            )
+          select * from yearly_sales_diff;
+
+   2.  Compare yearly product sales against overall average sales
+       Display: 'Above Average' ---> year sales is more then overall average sales
+                'Below Average' ---> year sales is less then overall average sales
+                'Average' ---> when year sales is same as overall average sales
+
+          with product_sales AS
+          (
+              select 
+                  year(order_date) as year,
+                  product_name,
+                  sum(sales) as totalsales,
+                  avg(sum(sales)) over(partition by product_name) as avg_sales
+              from gold.fact_sales
+              left join gold.dim_products on gold.fact_sales.product_key = gold.dim_products.product_key
+              group by year(order_date), product_name
+          ),
+          sales_diff as
+          (
+              SELECT
+                  *,
+                  totalsales - avg_sales as diff,
+                  case when totalsales - avg_sales > 0 then 'Above average'
+                       when totalsales - avg_sales <0 then 'Below average'
+                       else 'Average'
+                  end  as avg_change
+              from product_sales
+          )
+          select * from sales_diff;
+
+---------------------------------
+3. Part to whole analysis
+---------------------------------
+
+
+>> Example --
+
+   1. Which category contributes the most to overall sales 
+
+        with category_sales AS
+        (
+            select 
+                category,
+                sum(sales) as sales_by_category,
+                sum(sum(sales)) over() as totalsales
+            from gold.fact_sales
+            left join gold.dim_products on gold.fact_sales.product_key = gold.dim_products.product_key
+            group by category
+        ),
+        sales_per_by_category as 
+        (
+            select 
+                *,
+                round((sales_by_category / cast(totalsales as float))*100,2) as per_contribution
+            from category_sales
+        )
+        
+        select * 
+        from sales_per_by_category
+        order by per_contribution desc;
+
+
+---------------------------------
+4. Data segmentation
+---------------------------------
+Group the data based on specific range
+
+>> Example --
+
+   1. Segment products in cost ranges and count how many products fall in each range.
+
+        with product_segment AS
+        (
+        select 
+            product_key,
+            product_name,
+            cost,
+            case when cost < 100 then 'below 100'
+                 when cost between 100 and 500 then '100-500'
+                 when cost between 501 and 1000 then '501 - 1000'
+                 else 'Above 1000'
+            end  as cost_range
+        from gold.dim_products
+        )
+        
+        select 
+            cost_range,
+            count(*) as total_product
+        from product_segment
+        group by cost_range
+        order by total_product desc;
+
+
