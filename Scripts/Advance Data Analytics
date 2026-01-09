@@ -177,4 +177,45 @@ Group the data based on specific range
         group by cost_range
         order by total_product desc;
 
+    2. Group customers into three segment based on the there spending behaviour
+          VIP: customers having atleast 12 months of history and spending more then 5000
+          Regular: customers having aleast 12 months of history and spending 5000 or less
+          New: cutomers having lifespan of less then 12 months
+       and find the total number of customers in each group.
+
+         with customer_sales AS
+         (
+         select
+             gold.fact_sales.customer_key,
+             sum(sales) as totalsales,
+             min(order_date) as firstorder,
+             max(order_date) as lastorder,
+             DATEDIFF(month,min(order_date), max(order_date)) as lifespan
+         from gold.fact_sales
+         left join gold.dim_customers on gold.fact_sales.customer_key = gold.dim_customers.customer_key
+         group by gold.fact_sales.customer_key
+         ),
+         customer_seg AS
+         (
+             SELECT  
+                 *,
+                 case when lifespan >=12 and totalsales > 5000 then 'VIP'
+                      when lifespan >=12 and totalsales <= 5000 then 'Regular'
+                      else 'New'
+                 end as cust_type
+             from customer_sales
+         )
+         
+         select 
+             cust_type,
+             count(*) as total_cust
+         from customer_seg
+         group by cust_type
+         order by total_cust;
+
+
+
+      
+       
+
 
