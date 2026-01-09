@@ -1,0 +1,116 @@
+/*
+============================================================================================
+1. Customer Report
+============================================================================================
+Purpose:
+  This report consolidate key customer matrics and behaviour.
+
+Highlights:
+  1. Gather essential fields such as names, ages, and transection details.
+  2. Segment customers into categories (VIP, Regular, New) and age group.
+  3. Aggregates customer - level matrics:
+     - total orders
+     - total sales
+     - total quantity purchased
+     - total products
+     - lifespan (in months)
+  4. Calculates valuable KPI's:
+     - recency (months since last order)
+     - average order value
+     - average monthly spend
+============================================================================================
+/*
+
+create view gold.report_customer as
+    select
+        gold.fact_sales.customer_key,
+        firstname,
+        lastname,
+        datediff(year, birthdate, getdate()) as age,
+        max(order_date) as last_order,
+        datediff(month, max(order_date), getdate()) as recency,
+        datediff(month, min(order_date), max(order_date)) as lifespan,
+        count(distinct(order_number)) as totalorders,
+        sum(quantity) as totalquantity,
+        sum(sales) as totalsales,
+        case when count(distinct(order_number)) = 0 then 0
+             else sum(sales)/count(distinct(order_number))
+        end as avg_order_value,
+        case when datediff(month, min(order_date), max(order_date)) = 0 then 0
+             else sum(sales)/datediff(month, min(order_date), max(order_date))
+        end as avg_monthly_sales,
+        count(distinct(product_key)) as total_product,
+        case when datediff(month, min(order_date), max(order_date)) >=12 and sum(sales) > 5000 then 'VIP'
+            when datediff(month, min(order_date), max(order_date)) >=12 and sum(sales) <= 5000 then 'Regular'
+            else 'New'
+        end as cust_category,
+        case when datediff(year, birthdate, getdate()) > 28 then 'GenZ'
+            when datediff(year, birthdate, getdate()) between 29 and 44 then 'Millennials'
+            when datediff(year, birthdate, getdate()) between 45 and 60 then 'GenX'
+            when datediff(year, birthdate, getdate()) between 61 and 79 then 'Baby Boomers'
+            when datediff(year, birthdate, getdate()) >=80 then 'Seniors'
+            else null
+        end as age_group
+    from gold.fact_sales
+    left join gold.dim_customers on gold.fact_sales.customer_key = gold.dim_customers.customer_key
+    group by gold.fact_sales.customer_key, firstname, lastname, birthdate;
+
+>> use below command to call view -
+
+------------------------------------
+select * from gold.report_customer;
+------------------------------------
+
+/*
+============================================================================================
+2. Product Report
+============================================================================================
+Purpose:
+  This report consolidate key product matrics and behaviour.
+
+Highlights:
+  1. Gather essential fields such as product name, category, subcategory, and cost.
+  2. Segment product by revenue to identify high-performers, mid-range, or low-performers
+  3. Aggregates product-level metrics:
+     - total orders
+     - total sales
+     - total quantity sold
+     - total customers (unique)
+     - lifespan (in months)
+  4. Calculates valuable KPI's:
+     - recency (months since last sales)
+     - average order revenue
+     - average monthly revenue
+============================================================================================
+/*
+
+create view gold.report_product as
+    SELECT  
+        gold.fact_sales.product_key,
+        product_name,
+        category,
+        subcategory,
+        cost,
+        datediff(month, min(order_date), max(order_date)) as lifespan,
+        datediff(month, max(order_date), getdate()) as recency,
+        sum(quantity) as total_quantity,
+        count(distinct(customer_key)) as total_customer,
+        count(distinct(order_number)) as total_orders,
+        sum(sales) as revenue,
+        case when sum(sales) > 50000 then 'High-performer'
+            when sum(sales) >= 10000 then 'Mid-range'
+            else 'Low-performer'
+        end as product_segment,
+        sum(sales)/count(distinct(order_number)) as avg_order_revenue,
+        case when datediff(month, min(order_date), max(order_date)) = 0 then 0
+            else sum(sales)/datediff(month, min(order_date), max(order_date))
+        end as avg_monthly_sales
+    from gold.fact_sales
+    left join gold.dim_products on gold.fact_sales.product_key = gold.dim_products.product_key
+    group by gold.fact_sales.product_key, product_name, category, subcategory, cost;
+
+>> use below command to call view -
+
+------------------------------------
+select * from gold.report_product;
+------------------------------------
